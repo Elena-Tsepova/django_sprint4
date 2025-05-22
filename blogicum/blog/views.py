@@ -93,7 +93,7 @@ class UserPostsListView(MainPostListView):
 
 class PostDetailView(DetailView):
     """Страница выбранного поста."""
-    
+
     model = Post
     template_name = "blog/detail.html"
     post_data = None
@@ -106,12 +106,13 @@ class PostDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["comments"] = self.object.comments.all().select_related("author")
-        
+        comments = self.object.comments.all().select_related("author")
+        context["comments"] = comments
+
         # Проверяем, может ли пользователь оставлять комментарии
         if self.request.user.is_authenticated and self.check_post_access():
             context["form"] = CommentEditForm()
-            
+
         return context
 
     def check_post_access(self):
@@ -119,14 +120,14 @@ class PostDetailView(DetailView):
         # Автор может комментировать даже неопубликованные посты
         if self.object.author == self.request.user:
             return True
-            
+
         # Для других пользователей проверяем стандартные условия
         return all((
             self.object.is_published,
             self.object.pub_date <= now(),
             self.object.category.is_published,
         ))
-    
+
 
 class UserProfileUpdateView(LoginRequiredMixin, UpdateView):
     """Обновление профиля пользователя.
@@ -305,7 +306,7 @@ class CommentUpdateView(CommentMixinView, UpdateView):
 
 class CommentDeleteView(CommentMixinView, DeleteView):
     """Удаление комментария."""
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Убедитесь, что не передаете форму в контексте
