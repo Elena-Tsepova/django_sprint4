@@ -218,7 +218,7 @@ class PostDeleteView(LoginRequiredMixin, DeleteView):
     """Удаление поста."""
 
     model = Post
-    template_name = "blog/create.html" 
+    template_name = "blog/create.html"
 
     def dispatch(self, request, *args, **kwargs):
         if self.get_object().author != request.user:
@@ -291,6 +291,8 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
             recipient_list=[recipient_email],
             fail_silently=True,
         )
+
+
 class CommentUpdateView(CommentMixinView, UpdateView):
     """Редактирование комментария.
 
