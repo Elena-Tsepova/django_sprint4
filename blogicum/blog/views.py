@@ -92,20 +92,8 @@ class UserPostsListView(MainPostListView):
 
 
 class PostDetailView(DetailView):
-    """Страница выбранного поста.
-
-    Атрибуты:
-        - model: Класс модели, используемой для получения данных.
-        - template_name: Имя шаблона, используемого для отображения страницы.
-        - post_data: Объект поста.
-
-    Методы:
-        - get_queryset(): Возвращает пост.
-        - get_context_data(**kwargs): Возвращает контекстные данные для
-        шаблона.
-        - check_post(): Возвращает результат проверки поста.
-    """
-
+    """Страница выбранного поста."""
+    
     model = Post
     template_name = "blog/detail.html"
     post_data = None
@@ -118,25 +106,28 @@ class PostDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        if self.check_post_data():
-            context["flag"] = True
+        context["comments"] = self.object.comments.all().select_related("author")
+        
+        # Проверяем, может ли пользователь оставлять комментарии
+        if self.request.user.is_authenticated and self.check_post_access():
             context["form"] = CommentEditForm()
-        context["comments"] = self.object.comments.all().select_related(
-            "author"
-        )
+            
         return context
 
-    def check_post_data(self):
-        """Вернуть результат проверки поста."""
-        return all(
-            (
-                self.post_data.is_published,
-                self.post_data.pub_date <= now(),
-                self.post_data.category.is_published,
-            )
-        )
-
-
+    def check_post_access(self):
+        """Проверяет доступ к посту для комментариев."""
+        # Автор может комментировать даже неопубликованные посты
+        if self.object.author == self.request.user:
+            return True
+            
+        # Для других пользователей проверяем стандартные условия
+        return all((
+            self.object.is_published,
+            self.object.pub_date <= now(),
+            self.object.category.is_published,
+        ))
+    
+    
 class UserProfileUpdateView(LoginRequiredMixin, UpdateView):
     """Обновление профиля пользователя.
 
@@ -223,23 +214,10 @@ class PostUpdateView(LoginRequiredMixin, UpdateView):
 
 
 class PostDeleteView(LoginRequiredMixin, DeleteView):
-    """Удаление поста.
-
-    Атрибуты:
-        - model: Класс модели, используемой для удаления поста.
-        - template_name: Имя шаблона, используемого для отображения страницы.
-
-    Методы:
-        - dispatch(request, *args, **kwargs): Проверяет, является ли
-        пользователь автором поста.
-        - get_context_data(**kwargs): Возвращает контекстные данные для
-        шаблона.
-        - get_success_url(): Возвращает URL-адрес перенаправления после
-        успешного удаления поста.
-    """
+    """Удаление поста."""
 
     model = Post
-    template_name = "blog/create.html"
+    template_name = "blog/create.html"  # Возможно, стоит использовать другой шаблон для удаления
 
     def dispatch(self, request, *args, **kwargs):
         if self.get_object().author != request.user:
@@ -248,13 +226,14 @@ class PostDeleteView(LoginRequiredMixin, DeleteView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["form"] = PostEditForm(instance=self.object)
+        # Удаляем форму из контекста, так как она не нужна для страницы удаления
+        if 'form' in context:
+            del context['form']
         return context
 
     def get_success_url(self):
         username = self.request.user
         return reverse_lazy("blog:profile", kwargs={"username": username})
-
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
     """Создание комментария.
@@ -327,9 +306,11 @@ class CommentUpdateView(CommentMixinView, UpdateView):
 
 
 class CommentDeleteView(CommentMixinView, DeleteView):
-    """Удаление комментария.
-
-    CommentMixinView: Базовый класс, предоставляющий функциональность.
-    """
-
-    ...
+    """Удаление комментария."""
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Убедитесь, что не передаете форму в контексте
+        if 'form' in context:
+            del context['form']
+        return context
