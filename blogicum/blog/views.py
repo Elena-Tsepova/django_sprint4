@@ -127,7 +127,7 @@ class PostDetailView(DetailView):
             self.object.category.is_published,
         ))
     
-    
+
 class UserProfileUpdateView(LoginRequiredMixin, UpdateView):
     """Обновление профиля пользователя.
 
@@ -217,7 +217,7 @@ class PostDeleteView(LoginRequiredMixin, DeleteView):
     """Удаление поста."""
 
     model = Post
-    template_name = "blog/create.html"  # Возможно, стоит использовать другой шаблон для удаления
+    template_name = "blog/create.html" 
 
     def dispatch(self, request, *args, **kwargs):
         if self.get_object().author != request.user:
@@ -226,7 +226,6 @@ class PostDeleteView(LoginRequiredMixin, DeleteView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Удаляем форму из контекста, так как она не нужна для страницы удаления
         if 'form' in context:
             del context['form']
         return context
@@ -234,6 +233,7 @@ class PostDeleteView(LoginRequiredMixin, DeleteView):
     def get_success_url(self):
         username = self.request.user
         return reverse_lazy("blog:profile", kwargs={"username": username})
+
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
     """Создание комментария.
@@ -290,8 +290,6 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
             recipient_list=[recipient_email],
             fail_silently=True,
         )
-
-
 class CommentUpdateView(CommentMixinView, UpdateView):
     """Редактирование комментария.
 
